@@ -11,33 +11,38 @@ from flow_n_corr_utils import min_max_norm
 
 from cvae_model import CVAE
 from dataset import cvae_dataset
+torch.manual_seed = 21
 
 
 DEVICE = torch.device("cuda")
 
-out_path = f"/home/fiman/projects/DL_course/spectral_diffusion/spectral_diffusion/outputs/{time.strftime('%Y%m%d-%H%M%S')}"
+out_path = f"/home/shahar/projects/CVAE_proj/CVAE/outputs/{time.strftime('%Y%m%d-%H%M%S')}"
 os.makedirs(out_path)
 writer = SummaryWriter(out_path)
 
-train_set = cvae_dataset("/media/fiman/storage/datasets/DL_course/cvae_cardio_flow_dataset", device=DEVICE)
+train_set = cvae_dataset("/home/shahar/projects/CVAE_proj/CVAE/data_for_cvae", device=DEVICE)
 
-train_loader = DataLoader(train_set, batch_size=64, shuffle=True)
+train_loader = DataLoader(train_set, batch_size=1, shuffle=True) #todo handle resizing for batches
 
-num_chs = [3, 16, 32, 64, 96, 128, 128]
+num_chs = [3, 16, 32, 64, 96, 128, 128] # [3, 16, 32, 64, 96, 96] #
 cvae_model = CVAE(num_chs=num_chs).to(DEVICE)
 criterion = torch.nn.MSELoss()
 optimizer = torch.optim.Adam(cvae_model.parameters(), lr=1e-3)
 
 lambda_reconstraction = 0.5
-lambda_kl = 0.5
+lambda_kl = 0.001
 
-num_epochs = 100
+num_epochs = 1000
 for num_epoch in range(num_epochs):
     cvae_model.train()
     epoch_acc_loss = 0
     epoch_reconstraction_loss = 0
     epoch_kl = 0
-    for batch_num, (flow, conditions_pyramid) in enumerate(train_loader):
+    for batch_num, (flow, conditions_pyramid) in enumerate(train_loader): # (flow, conditions_pyramid) # data_batch
+        # flow = data_batch["flow"]
+        # conditions_pyramid = []
+        # for layer_num in range(len(num_chs)):
+        #     conditions_pyramid.append(data_batch[layer_num])
         optimizer.zero_grad()
         flow_hat, kl = cvae_model(flow, conditions_pyramid)
         reconstraction_loss = criterion(flow_hat, flow)
@@ -50,8 +55,10 @@ for num_epoch in range(num_epochs):
     epoch_acc_loss /= (batch_num+1)
     epoch_reconstraction_loss /= (batch_num+1)
     epoch_kl /= (batch_num+1)
-    print(f"reconstraction_loss {epoch_reconstraction_loss} kl {epoch_kl} total {epoch_acc_loss}")
+    print(f"Epoch {num_epoch} reconstraction_loss {epoch_reconstraction_loss} kl {epoch_kl} total {epoch_acc_loss}")
     writer.add_scalar("reconstraction_loss", epoch_reconstraction_loss, num_epoch)
     writer.add_scalar("kl", epoch_kl, num_epoch)
     writer.add_scalar("total loss", epoch_acc_loss, num_epoch)
     writer.add_image("f_hat",min_max_norm(flow_hat[0, :, :, 60, :]), num_epoch) # 3 h w
+    writer.add_image("f",min_max_norm(flow[0, :, :, 60, :]), num_epoch) # 3 h w
+

@@ -79,7 +79,7 @@ class Encoder(nn.Module):
 
         z = mean + eps * std
 
-        self.kl = (std ** 2 + mean ** 2 - torch.log(std) - 1 / 2).sum()
+        self.kl = (std ** 2 + mean ** 2 - torch.log(std) - 1 / 2).sum() #TODO maybe mean or other normalization
 
         return z
 
@@ -102,14 +102,16 @@ class Decoder(nn.Module):
                 conv(ch_in_expanded, ch_out, stride=stride, kernel_size=kernel_size, conv_module=nn.ConvTranspose3d),
                 conv(ch_out, ch_out, kernel_size=kernel_size, conv_module=nn.ConvTranspose3d, isReLU=False)
             )
+            if l == 0:
+                layer[0][0].output_padding = (1, 1, 0)
             if l == 1:
                 layer[0][0].output_padding = (0, 0, 1)
             if l == 2:
                 layer[0][0].output_padding = (1, 1, 0)
             if l == 3:
-                layer[0][0].output_padding = (1, 1, 1)
+                layer[0][0].output_padding = (0,0,1)
             if l == 4:
-                layer[0][0].output_padding = (0, 0, 1)
+                layer[0][0].output_padding = (1,1,1)#(0, 0, 1)
             self.convs.append(layer)
 
     def forward(self, z, condition_pyramid):
