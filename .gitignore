@@ -162,3 +162,5 @@ cython_debug/
 #.idea/
 outputs/
 data_source/
+data_for_cvae_synth/
+data_source_synth/
