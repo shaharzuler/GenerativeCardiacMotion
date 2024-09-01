@@ -1,0 +1,12 @@
+{
+    "lambda_reconstraction": 0.95,
+    "lambda_kl": 0.00,
+    "num_epochs": 1000,
+    "augmentation_params" : 
+    {
+        "intensity_noise_var": 0.015,
+        "max_shift": 10,
+        "zoom_vals": [0.9, 1.1]
+
+    }
+}

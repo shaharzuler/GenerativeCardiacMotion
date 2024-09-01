@@ -79,7 +79,7 @@ class Encoder(nn.Module):
 
         z = mean + eps * std
 
-        self.kl = (std ** 2 + mean ** 2 - torch.log(std) - 1 / 2).sum() #TODO maybe mean or other normalization
+        self.kl = (std ** 2 + mean ** 2 - torch.log(std) - 1 / 2).mean()
 
         return z
 
@@ -133,3 +133,9 @@ class CVAE(torch.nn.Module):
         z = self.encoder(flow.float(), conditions_pyramid)
         flow_hat = self.decoder(z, conditions_pyramid)
         return flow_hat, self.encoder.kl
+
+    def generate(self, conditions_pyramid, device, latent_shape=(1,128,3,3,3)):
+        z = torch.randn(latent_shape).to(device)
+        flow_hat = self.decoder(z, conditions_pyramid)
+        return flow_hat
+

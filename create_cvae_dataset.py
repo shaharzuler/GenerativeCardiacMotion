@@ -10,8 +10,8 @@ all_paths = sorted(os.listdir(data_source))
 # flow_path = '/home/fiman/projects/DL_course/spectral_diffusion/spectral_diffusion/cardiac_sample_data/cardiac_sample_data/cardiac_sample_data/flow_for_image_thetas_100.0_0.0_rs_0.9_0.9_h_0.91_linear_mask_True_blur_radious_1.npy'
 target_dir = "/home/shahar/projects/CVAE_proj/CVAE/data_for_cvae"
 
-img_paths  = all_paths[len(all_paths)//2:]
-flow_paths = all_paths[:len(all_paths)//2]
+img_paths  = all_paths[len(all_paths)//3:]
+flow_paths = all_paths[:len(all_paths)//3]
 
 img_paths = [os.path.join(data_source, f) for f in img_paths]
 flow_paths = [os.path.join(data_source, f) for f in flow_paths]
