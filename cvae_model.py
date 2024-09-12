@@ -42,9 +42,11 @@ class FeatureExtractor(nn.Module):  # the frozen extractor
 
 
 class Encoder(nn.Module):
-    def __init__(self, num_chs):
+    def __init__(self, num_chs, max_var=6):
         super(Encoder, self).__init__()
         self.num_chs = num_chs
+        self.max_var = max_var
+        self.epsilon = 1e-8
         self.convs = nn.ModuleList()
         kernel_size = 3
         stride = 2
@@ -74,20 +76,21 @@ class Encoder(nn.Module):
             x = conv(x)
 
         mean = self.mean(x)
-        std = torch.exp(0.5 * self.var(x))
+        std = torch.exp(0.5 * torch.clamp(self.var(x), max=self.max_var))
         eps = torch.randn_like(std)
 
         z = mean + eps * std
 
-        self.kl = (std ** 2 + mean ** 2 - torch.log(std) - 1 / 2).mean()
+        self.kl = (std ** 2 + mean ** 2 - torch.log(std + self.epsilon) - 1 / 2).mean()
 
         return z
 
 
 class Decoder(nn.Module):
-    def __init__(self, num_chs):
+    def __init__(self, num_chs, max_flow_hat_abs_val):
         super(Decoder, self).__init__()
         self.num_chs = num_chs
+        self.max_f_hat_abs_val = abs(max_flow_hat_abs_val)
         self.convs = nn.ModuleList()
         kernel_size = 3
         stride = 2
@@ -119,15 +122,15 @@ class Decoder(nn.Module):
         for conv, condition_features in zip(self.convs, condition_pyramid):  # check
             x = torch.concat((x, condition_features), dim=1)
             x = conv(x)
-
+        x = torch.clip(x, min=-self.max_f_hat_abs_val, max=self.max_f_hat_abs_val)
         return x
 
 
 class CVAE(torch.nn.Module):
-    def __init__(self, num_chs):
+    def __init__(self, num_chs, max_flow_hat_abs_val=50):
         super().__init__()
         self.encoder = Encoder(num_chs=num_chs)
-        self.decoder = Decoder(num_chs=num_chs[:-1][::-1] + [3])
+        self.decoder = Decoder(num_chs=num_chs[:-1][::-1] + [3], max_flow_hat_abs_val=max_flow_hat_abs_val)
 
     def forward(self, flow, conditions_pyramid):
         z = self.encoder(flow.float(), conditions_pyramid)
@@ -138,4 +141,12 @@ class CVAE(torch.nn.Module):
         z = torch.randn(latent_shape).to(device)
         flow_hat = self.decoder(z, conditions_pyramid)
         return flow_hat
+
+    # def save_model(self, path, epoch):
+    #     try:
+    #         models = {'epoch': epoch, 'state_dict_encoder': self.encoder.module.state_dict(), 'state_dict_decoder': self.decoder.module.state_dict()}
+    #     except:
+    #         models = {'epoch': epoch, 'state_dict_encoder': self.encoder.state_dict()}
+    #     save_checkpoint(os.path.join(self.output_root , "checkpoints"), models, name, is_best) 
+    #     torch.save(states, file_path)
 
