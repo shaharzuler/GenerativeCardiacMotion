@@ -3,7 +3,23 @@
 This project presents a method to generate synthetic 3D flow fields for myocardium deformation, conditioning on real cardiac CT frames using a Conditional Variational Autoencoder (CVAE). These synthetic data serve as ground truth annotations for training myocardium motion models. For a full explanation and results, visit the [project page](https://shaharzuler.github.io/CVAEPage).
 
 ## Installation
-Placeholder for installation instructions
+
+To install the necessary dependencies for the project, follow these steps:
+
+1. Clone this repository:
+   ```bash
+   git clone https://github.com/shaharzuler/CVAE.git
+2. Navigate to the project directory:
+    ```bash
+    cd CVAE
+    ```
+3. Install the required Python packages:
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+
+
 
 ## Dataset Preparation
 
