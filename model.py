@@ -3,7 +3,7 @@ import torch.nn as nn
 
 
 def conv(in_planes, out_planes, kernel_size=3, stride=1, dilation=1, isReLU=True,
-         conv_module=nn.Conv3d):  # nn.ConvTranspose3d
+         conv_module=nn.Conv3d):
     if isReLU:
         return nn.Sequential(
             conv_module(in_planes, out_planes, kernel_size=kernel_size,
@@ -19,7 +19,7 @@ def conv(in_planes, out_planes, kernel_size=3, stride=1, dilation=1, isReLU=True
         )
 
 
-class FeatureExtractor(nn.Module):  # the frozen extractor
+class FeatureExtractor(nn.Module):
     def __init__(self, num_chs):
         super(FeatureExtractor, self).__init__()
         self.num_chs = num_chs
@@ -37,7 +37,6 @@ class FeatureExtractor(nn.Module):  # the frozen extractor
         for conv in self.convs:
             x = conv(x)
             feature_pyramid.append(x)
-
         return feature_pyramid[::-1]
 
 
@@ -63,10 +62,8 @@ class Encoder(nn.Module):
                 conv(ch_out, ch_out, kernel_size=kernel_size)
             )
             self.convs.append(layer)
-
         self.mean = nn.Conv3d(num_chs[-1], num_chs[-1], kernel_size=1, stride=1, dilation=1, padding=0 // 2, bias=True)
         self.var = nn.Conv3d(num_chs[-1], num_chs[-1], kernel_size=1, stride=1, dilation=1, padding=0 // 2, bias=True)
-
         self.kl = 0
 
     def forward(self, flow, condition_pyramid):
@@ -74,13 +71,10 @@ class Encoder(nn.Module):
         for conv, condition_features in zip(self.convs, condition_pyramid[::-1]):  # check
             x = torch.concat((x, condition_features), dim=1)
             x = conv(x)
-
         mean = self.mean(x)
         std = torch.exp(0.5 * torch.clamp(self.var(x), max=self.max_var))
         eps = torch.randn_like(std)
-
         z = mean + eps * std
-
         self.kl = (std ** 2 + mean ** 2 - torch.log(std + self.epsilon) - 1 / 2).mean()
 
         return z
@@ -137,16 +131,14 @@ class CVAE(torch.nn.Module):
         flow_hat = self.decoder(z, conditions_pyramid)
         return flow_hat, self.encoder.kl
 
-    def generate(self, conditions_pyramid, device, latent_shape=(1,128,3,3,3)):
-        z = torch.randn(latent_shape).to(device)
+    def generate(self, conditions_pyramid, device, latent_shape=(1,128,3,3,3), output_z=False, provide_z=False):
+        if type(provide_z) == bool and not provide_z:
+            z = torch.randn(latent_shape).to(device)
+        else:
+            z = provide_z
         flow_hat = self.decoder(z, conditions_pyramid)
-        return flow_hat
+        if not output_z:
+            return flow_hat
+        return flow_hat, z.flatten()
 
-    # def save_model(self, path, epoch):
-    #     try:
-    #         models = {'epoch': epoch, 'state_dict_encoder': self.encoder.module.state_dict(), 'state_dict_decoder': self.decoder.module.state_dict()}
-    #     except:
-    #         models = {'epoch': epoch, 'state_dict_encoder': self.encoder.state_dict()}
-    #     save_checkpoint(os.path.join(self.output_root , "checkpoints"), models, name, is_best) 
-    #     torch.save(states, file_path)
 

@@ -2,28 +2,23 @@ import os
 import time
 import json
 
-import matplotlib.pyplot as plt
 import torch
 import torch.multiprocessing as mp
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 
-from four_d_ct_cost_unrolling import torch_to_np
 from flow_n_corr_utils import min_max_norm
 
-from cvae_model import CVAE
+from model import CVAE
 from dataset import cvae_dataset
 torch.manual_seed = 21
-
-
-
 
 
 def train_cvae(l1o_idx, top_out_path, device, config):
     torch.cuda.set_device(device) 
     DEVICE = torch.device(device)
-    out_path = f"{top_out_path}/{l1o_idx}"#f"/home/shahar/projects/CVAE_proj/CVAE/outputs/{time.strftime('%Y%m%d_%H%M%S')}"
+    out_path = f"{top_out_path}/{l1o_idx}"
     print(out_path)
     os.makedirs(out_path)
     os.makedirs(out_path+"/train")
@@ -32,21 +27,21 @@ def train_cvae(l1o_idx, top_out_path, device, config):
     train_writer = SummaryWriter(out_path+"/train")
     eval_writer = SummaryWriter(out_path+"/eval")
     generation_writer = SummaryWriter(out_path+"/z_generation")
-    train_set = cvae_dataset("/home/shahar/projects/CVAE_proj/CVAE/data_for_cvae", device=DEVICE, l1o_idx=l1o_idx, train=True, augmentations=True, augmentation_params=config["augmentation_params"])
+    train_set = cvae_dataset("/home/shahar/projects/CVAE_proj/CVAE/data/data_for_cvae", device=DEVICE, l1o_idx=l1o_idx, train=True, augmentations=True, augmentation_params=config["augmentation_params"])
     train_loader = DataLoader(train_set, batch_size=config["batch_size"], shuffle=True)
-    val_set = cvae_dataset("/home/shahar/projects/CVAE_proj/CVAE/data_for_cvae", device=DEVICE, l1o_idx=l1o_idx, train=False)
+    val_set = cvae_dataset("/home/shahar/projects/CVAE_proj/CVAE/data/data_for_cvae", device=DEVICE, l1o_idx=l1o_idx, train=False)
     val_loader = DataLoader(val_set, batch_size=1, shuffle=False)
 
 
-    num_chs = [3, 16, 32, 64, 96, 128, 128] # [3, 16, 32, 64, 96, 96] #
+    num_chs = [3, 16, 32, 64, 96, 128, 128]
     cvae_model = CVAE(num_chs=num_chs, max_flow_hat_abs_val=50).to(DEVICE)
     criterion = torch.nn.MSELoss()
     optimizer = torch.optim.Adam(cvae_model.parameters(), lr=1e-3)
 
-    lambda_reconstraction = config["lambda_reconstraction"]#0.85#0.7 #0.5 #0.1#0.05#0.5
-    lambda_kl = config["lambda_kl"]#0.15#0.3 #0.5 #0.001#0.0001 nan
+    lambda_reconstraction = config["lambda_reconstraction"]
+    lambda_kl = config["lambda_kl"]
 
-    num_epochs = config["num_epochs"]#1000
+    num_epochs = config["num_epochs"]
     for num_epoch in range(num_epochs):
         cvae_model.train()
         epoch_train_acc_loss = 0
@@ -120,9 +115,8 @@ def train_cvae(l1o_idx, top_out_path, device, config):
 
 if __name__ == '__main__':
     mp.set_start_method('spawn')
-    # torch.manual_seed(21)
-    DEVICE0 = "cuda:0"#"cuda")
-    DEVICE1 = "cuda:1"#"cuda")
+    DEVICE0 = "cuda:0"
+    DEVICE1 = "cuda:1"
 
     top_out_path = f"/home/shahar/projects/CVAE_proj/CVAE/outputs/len_44_dataset/{time.strftime('%Y%m%d_%H%M%S')}"
     os.makedirs(top_out_path)
@@ -134,19 +128,24 @@ if __name__ == '__main__':
     output_config_path = os.path.join(top_out_path, "config.json")
     with open(output_config_path, 'w') as output_config_file:
         json.dump(config, output_config_file, indent=4)
-    # l1o_idx, device = 2, DEVICE0
-    # train_cvae(l1o_idx, top_out_path, device, config)
-    
-    for batch in range(11):
-        processes = []
-        for l1o_idx, device in enumerate([DEVICE0, DEVICE0, DEVICE1, DEVICE1]):
-            print("l1o_idx", (batch*4)+l1o_idx)
-            p = mp.Process(target=train_cvae, args=((batch*4)+l1o_idx, top_out_path, device, config))
-            p.start()
-            processes.append(p)
 
-        for p in processes:
-            p.join()
+    multiprocess=False
 
-    print(1)
+    if not multiprocess:
+        l1o_idx, device = 2, DEVICE0 #TODO set sample number to l1o_idx
+        train_cvae(l1o_idx, top_out_path, device, config)
+        
+    else:
+        for batch in range(11):
+            processes = []
+            for l1o_idx, device in enumerate([DEVICE0, DEVICE0, DEVICE1, DEVICE1]):
+                print("l1o_idx", (batch*4)+l1o_idx)
+                p = mp.Process(target=train_cvae, args=((batch*4)+l1o_idx, top_out_path, device, config))
+                p.start()
+                processes.append(p)
+
+            for p in processes:
+                p.join()
+
+    print("Finished")
 

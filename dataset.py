@@ -2,12 +2,7 @@ import os
 
 import torch
 import torch.nn.functional as F
-
 import numpy as np
-
-from scipy.ndimage import zoom
-
-
 
 
 class cvae_dataset(torch.utils.data.Dataset):
@@ -38,24 +33,14 @@ class cvae_dataset(torch.utils.data.Dataset):
             data_sample[num_layer] = layer
 
         if self.augmentations:
-            # aug_params = {
-            #     "intensity_noise_var": 0.015,
-            #     "max_shift": 10,
-            #     "zoom_vals": (0.9, 1.1)
-
-            # }
             flow, conditions_pyramid = self.apply_augmentations(flow, conditions_pyramid, self.augmentation_params)
         
         return  flow, conditions_pyramid
 
 
-
     def apply_augmentations(self, flow, conditions_pyramid, aug_params):
-
         flow, conditions_pyramid = self.apply_random_movement(flow, conditions_pyramid, aug_params["max_shift"])
-
         flow, conditions_pyramid = self.apply_random_zoom(flow, conditions_pyramid, aug_params["zoom_vals"])
-
         conditions_pyramid = [layer + torch.randn_like(layer) * aug_params["intensity_noise_var"] for layer in conditions_pyramid]
         
         return flow, conditions_pyramid
@@ -97,10 +82,6 @@ class cvae_dataset(torch.utils.data.Dataset):
             conditions_pyramid[i] = layer
         
         return flow, conditions_pyramid
-
-
-
-
 
     def __len__(self):
         if self.train:
