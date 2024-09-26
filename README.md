@@ -19,8 +19,6 @@ To install the necessary dependencies for the project, follow these steps:
     ```
 
 
-
-
 ## Dataset Preparation
 
 To prepare the dataset, use `create_cvae_dataset.py`. The `data_source` directory must contain:
@@ -29,7 +27,6 @@ To prepare the dataset, use `create_cvae_dataset.py`. The `data_source` director
 
 Adjust the `data_source` and `target_dir` paths in the script and run it to generate the dataset, extracting features from the pyramid feature extractor.
 
-## Training
 
 ## Training
 
@@ -56,7 +53,5 @@ To perform inference using the trained model, run `infer.py`:
 1. **Random Sampling**: Samples latent vectors from a standard normal distribution, creating diverse outputs.
 2. **Grid Search**: Explores the latent space systematically by generating flow fields along a predefined grid of latent variables.
 3. **2D Plane Sampling**: Random sampling is restricted to a selected 2D plane within the latent space, allowing exploration of variations constrained to a specific slice of the latent distribution.
-
-
 
 The script will generate synthetic flow fields based on the latent space exploration, outputting the results in the specified path.
