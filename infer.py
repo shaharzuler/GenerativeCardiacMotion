@@ -24,7 +24,8 @@ def infer_cvae(l1o_idx, top_out_path, device, config):
     os.makedirs(out_path+"/infer/2dims_and0")
     os.makedirs(out_path+"/infer/2dims_and0_grid")
 
-    val_set = cvae_dataset("/home/shahar/projects/CVAE_proj/CVAE/data/data_for_cvae", device=DEVICE, l1o_idx=l1o_idx, train=False)
+    dataset_path = "/home/shahar/projects/CVAE_proj/CVAE/data/data_for_cvae"
+    val_set = cvae_dataset(dataset_path, device=DEVICE, l1o_idx=l1o_idx, train=False)
     val_loader = DataLoader(val_set, batch_size=1, shuffle=False)
 
     num_chs = [3, 16, 32, 64, 96, 128, 128] 
@@ -34,61 +35,73 @@ def infer_cvae(l1o_idx, top_out_path, device, config):
     cvae_model.eval()
     
     for flow, conditions_pyramid in val_loader: 
+
         num_generations = 30
-        np.save(f"{out_path}/infer/random/condition.npy", conditions_pyramid[-1].detach().cpu().numpy())
-        plt.imshow(conditions_pyramid[-1].detach().cpu().numpy()[0,0,43], cmap="bone")
-        plt.savefig(f"{out_path}/infer/random/condition.png")
 
-        for gen in range(num_generations):
-            flow_hat_generated, z = cvae_model.generate(conditions_pyramid, device=DEVICE, output_z=True, provide_z=False)
-            flow_hat_generated = flow_hat_generated.detach().cpu().numpy()
-            z = z.detach().cpu().numpy()
+        # random latents:
+        generate_from_random_latents = False
+        if generate_from_random_latents:
+            np.save(f"{out_path}/infer/random/condition.npy", conditions_pyramid[-1].detach().cpu().numpy())
+            plt.imshow(conditions_pyramid[-1].detach().cpu().numpy()[0,0,43], cmap="bone")
+            plt.savefig(f"{out_path}/infer/random/condition.png")
+            
+            for gen in range(num_generations):
+                flow_hat_generated, z = cvae_model.generate(conditions_pyramid, device=DEVICE, output_z=True, provide_z=False)
+                flow_hat_generated = flow_hat_generated.detach().cpu().numpy()
+                z = z.detach().cpu().numpy()
 
-            np.save(f"{out_path}/infer/random/flow_generated_{gen}.npy", flow_hat_generated)
-            np.save(f"{out_path}/infer/random/z_{gen}.npy", z)
-            viss=disp_flow_colors(flow_hat_generated[0])
-            for dim, section in zip(("x","y","z"),viss):
-                plt.imshow(section.transpose())
-                plt.savefig(f"{out_path}/infer/random/flow_section_{dim}_{gen}")
+                np.save(f"{out_path}/infer/random/flow_generated_{gen}.npy", flow_hat_generated)
+                np.save(f"{out_path}/infer/random/z_{gen}.npy", z)
+                viss=disp_flow_colors(flow_hat_generated[0])
+                for dim, section in zip(("x","y","z"),viss):
+                    plt.imshow(section.transpose())
+                    plt.savefig(f"{out_path}/infer/random/flow_section_{dim}_{gen}")
 
-        np.save(f"{out_path}/infer/2dims_and0_grid/condition.npy", conditions_pyramid[-1].detach().cpu().numpy())
-        plt.imshow(conditions_pyramid[-1].detach().cpu().numpy()[0,0,43], cmap="bone")
-        plt.savefig(f"{out_path}/infer/2dims_and0_grid/condition.png")
-        for x in np.linspace(-1,1,10):
-            for y in np.linspace(-1,1,10):
+        # grid latents: RECOMMENDED METHOD
+        generate_grid_latents = True
+        if generate_grid_latents:
+            np.save(f"{out_path}/infer/2dims_and0_grid/condition.npy", conditions_pyramid[-1].detach().cpu().numpy())
+            plt.imshow(conditions_pyramid[-1].detach().cpu().numpy()[0,0,43], cmap="bone")
+            plt.savefig(f"{out_path}/infer/2dims_and0_grid/condition.png")
+            for x in np.linspace(-1,1,10):
+                for y in np.linspace(-1,1,10):
+                    z_size = (1,128,3,3,3)
+                    z = torch.zeros(z_size).to(DEVICE0)
+                    z[0,:60,:,:,:] = x
+                    z[0,61:,:,:,:] = y
+                    flow_hat_generated, z = cvae_model.generate(conditions_pyramid, device=DEVICE, output_z=True, provide_z=z)
+                    flow_hat_generated = flow_hat_generated.detach().cpu().numpy()
+                    z = z.detach().cpu().numpy()
+
+                    np.save(f"{out_path}/infer/2dims_and0_grid/flow_generated_x_{x:.3f}_y_{y:.3f}.npy", flow_hat_generated)
+                    np.save(f"{out_path}/infer/2dims_and0_grid/x_{x:.3f}_y_{y:.3f}.npy", z)
+                    viss=disp_flow_colors(flow_hat_generated[0])
+                    for dim, section in zip(("x","y","z"),viss):
+                        plt.imshow(section.transpose())
+                        plt.savefig(f"{out_path}/infer/2dims_and0_grid/flow_section_{dim}_x_{x:.3f}_y_{y:.3f}.png")
+
+        # sample on random pseudo-2D space (some plain):
+        generate_random_on_latent_plane = False
+        if generate_random_on_latent_plane:
+            np.save(f"{out_path}/infer/2dims_and0/condition.npy", conditions_pyramid[-1].detach().cpu().numpy())
+            plt.imshow(conditions_pyramid[-1].detach().cpu().numpy()[0,0,43], cmap="bone")
+            plt.savefig(f"{out_path}/infer/2dims_and0/condition.png")
+            
+            for gen in range(num_generations):
                 z_size = (1,128,3,3,3)
                 z = torch.zeros(z_size).to(DEVICE0)
-                z[0,:60,:,:,:] = x
-                z[0,61:,:,:,:] = y
+                z[0,:60,:,:,:] = np.random.normal()
+                z[0,61:,:,:,:] = np.random.normal()
                 flow_hat_generated, z = cvae_model.generate(conditions_pyramid, device=DEVICE, output_z=True, provide_z=z)
                 flow_hat_generated = flow_hat_generated.detach().cpu().numpy()
                 z = z.detach().cpu().numpy()
 
-                np.save(f"{out_path}/infer/2dims_and0_grid/flow_generated_x_{x:.3f}_y_{y:.3f}.npy", flow_hat_generated)
-                np.save(f"{out_path}/infer/2dims_and0_grid/x_{x:.3f}_y_{y:.3f}.npy", z)
+                np.save(f"{out_path}/infer/2dims_and0/flow_generated_{gen}.npy", flow_hat_generated)
+                np.save(f"{out_path}/infer/2dims_and0/z_{gen}.npy", z)
                 viss=disp_flow_colors(flow_hat_generated[0])
                 for dim, section in zip(("x","y","z"),viss):
                     plt.imshow(section.transpose())
-                    plt.savefig(f"{out_path}/infer/2dims_and0_grid/flow_section_{dim}_x_{x:.3f}_y_{y:.3f}.png")
-
-        np.save(f"{out_path}/infer/2dims_and0/condition.npy", conditions_pyramid[-1].detach().cpu().numpy())
-        plt.imshow(conditions_pyramid[-1].detach().cpu().numpy()[0,0,43], cmap="bone")
-        plt.savefig(f"{out_path}/infer/2dims_and0/condition.png")
-        for gen in range(num_generations):
-            z_size = (1,128,3,3,3)
-            z = torch.zeros(z_size).to(DEVICE0)
-            z[0,:60,:,:,:] = np.random.normal()
-            z[0,:61,:,:,:] = np.random.normal()
-            flow_hat_generated, z = cvae_model.generate(conditions_pyramid, device=DEVICE, output_z=True, provide_z=z)
-            flow_hat_generated = flow_hat_generated.detach().cpu().numpy()
-            z = z.detach().cpu().numpy()
-
-            np.save(f"{out_path}/infer/2dims_and0/flow_generated_{gen}.npy", flow_hat_generated)
-            np.save(f"{out_path}/infer/2dims_and0/z_{gen}.npy", z)
-            viss=disp_flow_colors(flow_hat_generated[0])
-            for dim, section in zip(("x","y","z"),viss):
-                plt.imshow(section.transpose())
-                plt.savefig(f"{out_path}/infer/2dims_and0/flow_section_{dim}_{gen}.png")
+                    plt.savefig(f"{out_path}/infer/2dims_and0/flow_section_{dim}_{gen}.png")
 
 
 if __name__ == '__main__':
@@ -99,7 +112,7 @@ if __name__ == '__main__':
     top_out_path = f"/home/shahar/projects/CVAE_proj/CVAE/outputs/len_44_dataset/{time.strftime('%Y%m%d_%H%M%S')}"
     os.makedirs(top_out_path)
     
-    config_file_path = "/home/shahar/projects/CVAE_proj/CVAE/config.json"
+    config_file_path = "config.json"
     with open(config_file_path, 'r') as config_file:
         config = json.load(config_file)
 

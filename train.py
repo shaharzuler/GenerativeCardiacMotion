@@ -27,9 +27,10 @@ def train_cvae(l1o_idx, top_out_path, device, config):
     train_writer = SummaryWriter(out_path+"/train")
     eval_writer = SummaryWriter(out_path+"/eval")
     generation_writer = SummaryWriter(out_path+"/z_generation")
-    train_set = cvae_dataset("/home/shahar/projects/CVAE_proj/CVAE/data/data_for_cvae", device=DEVICE, l1o_idx=l1o_idx, train=True, augmentations=True, augmentation_params=config["augmentation_params"])
+    dataset_path = "/home/shahar/projects/CVAE_proj/CVAE/data/data_for_cvae" #its the same for train and validation because of leavw-one-out (l1o) training strategy. l1o_idx param sets the validation sampe num.
+    train_set = cvae_dataset(dataset_path, device=DEVICE, l1o_idx=l1o_idx, train=True, augmentations=True, augmentation_params=config["augmentation_params"])
     train_loader = DataLoader(train_set, batch_size=config["batch_size"], shuffle=True)
-    val_set = cvae_dataset("/home/shahar/projects/CVAE_proj/CVAE/data/data_for_cvae", device=DEVICE, l1o_idx=l1o_idx, train=False)
+    val_set = cvae_dataset(dataset_path, device=DEVICE, l1o_idx=l1o_idx, train=False)
     val_loader = DataLoader(val_set, batch_size=1, shuffle=False)
 
 
@@ -118,10 +119,12 @@ if __name__ == '__main__':
     DEVICE0 = "cuda:0"
     DEVICE1 = "cuda:1"
 
+    multiprocess=False
+
     top_out_path = f"/home/shahar/projects/CVAE_proj/CVAE/outputs/len_44_dataset/{time.strftime('%Y%m%d_%H%M%S')}"
     os.makedirs(top_out_path)
     
-    config_file_path = "/home/shahar/projects/CVAE_proj/CVAE/config.json"
+    config_file_path = "config.json"
     with open(config_file_path, 'r') as config_file:
         config = json.load(config_file)
 
@@ -129,14 +132,13 @@ if __name__ == '__main__':
     with open(output_config_path, 'w') as output_config_file:
         json.dump(config, output_config_file, indent=4)
 
-    multiprocess=False
 
     if not multiprocess:
         l1o_idx, device = 2, DEVICE0 #TODO set sample number to l1o_idx
         train_cvae(l1o_idx, top_out_path, device, config)
         
     else:
-        for batch in range(11):
+        for batch in range(11): # each "batch" of sample nums maning training *seperately* for 4 samples simutaniously
             processes = []
             for l1o_idx, device in enumerate([DEVICE0, DEVICE0, DEVICE1, DEVICE1]):
                 print("l1o_idx", (batch*4)+l1o_idx)
