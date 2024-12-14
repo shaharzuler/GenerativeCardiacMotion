@@ -1,6 +1,6 @@
-# Synthetic Flow Field Generation for Myocardium Deformation Analysis
+# Generating Ground Truth: Dense 3D Flow Fields for Cardiac CT
 
-This project presents a method to generate synthetic 3D flow fields for myocardium deformation, conditioning on real cardiac CT frames using a Conditional Variational Autoencoder (CVAE). These synthetic data serve as ground truth annotations for training myocardium motion models. For a full explanation and results, visit the [project page](https://shaharzuler.github.io/CVAEPage).
+We present a method to generate synthetic 3D flow fields for myocardium deformation, conditioning on real cardiac CT frames using a Conditional Variational Autoencoder (CVAE). These synthetic data serve as ground truth annotations for training myocardium motion models. For a full explanation and results, visit the [project page](https://shaharzuler.github.io/CVAEPage).
 
 ## Installation
 
