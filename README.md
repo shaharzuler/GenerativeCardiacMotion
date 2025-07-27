@@ -8,10 +8,10 @@ To install the necessary dependencies for the project, follow these steps:
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/shaharzuler/CVAE.git
+   git clone https://github.com/shaharzuler/GenerativeCardiacMotion.git
 2. Navigate to the project directory:
     ```bash
-    cd CVAE
+    cd GenerativeCardiacMotion
     ```
 3. Install the required Python packages:
     ```bash
